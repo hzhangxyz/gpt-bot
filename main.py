@@ -41,10 +41,9 @@ def generate_messages(chat_history, model, prompt):
     for msg in chat_history:
         messages.append({"role": roles[role_id], "content": msg})
         role_id = 1 - role_id
-    if num_tokens_from_messages(messages, model) > MAX_TOKENS // 2:
-        return generate_messages(chat_history[2:], model, prompt)
-    else:
-        return messages
+    while num_tokens_from_messages(messages, model) > MAX_TOKENS // 2:
+        messages = [messages[0]] + messages[3:]
+    return messages
 
 
 async def completion(chat_history, model, prompt):
