@@ -81,9 +81,26 @@ async def driver(model, prompt):
             multiline=True,
             prompt_continuation=prompt_continuation,
         )
-        if user_input.startswith("/prompt "):
-            prompt = user_input[8:]
+        if user_input.startswith("/prompt"):
+            prompt = user_input[7:]
             print("Update prompt to: ", prompt)
+            continue
+        if user_input.startswith("/rollback"):
+            chat_history = chat_history[:-2]
+            print("Rollback the history")
+            continue
+        if user_input.startswith("/history"):
+            print(chat_history)
+            continue
+        if user_input.startswith("/edit"):
+            last_chat = chat_history[-1]
+            user_edit = await session.prompt_async(
+                "Bot: ",
+                multiline=True,
+                prompt_continuation=prompt_continuation,
+                default=last_chat,
+            )
+            chat_history[-1] = user_edit
             continue
 
         chat_history.append(user_input)
