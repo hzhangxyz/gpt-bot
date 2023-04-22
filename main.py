@@ -72,14 +72,19 @@ async def driver(model, prompt):
     print(prompt)
     print()
 
+    multiline = False
     chat_history = []
     session = prompt_toolkit.PromptSession()
     while True:
         user_input = await session.prompt_async(
             "You: ",
-            multiline=True,
+            multiline=multiline,
             prompt_continuation=prompt_continuation,
         )
+        if user_input.startswith("/multiline"):
+            multiline = not multiline
+            print(f"{multiline=}")
+            continue
         if user_input.startswith("/prompt"):
             prompt = user_input[7:]
             print("Update prompt to: ", prompt)
@@ -95,7 +100,7 @@ async def driver(model, prompt):
             last_chat = chat_history[-1]
             user_edit = await session.prompt_async(
                 "Bot: ",
-                multiline=True,
+                multiline=multiline,
                 prompt_continuation=prompt_continuation,
                 default=last_chat,
             )
