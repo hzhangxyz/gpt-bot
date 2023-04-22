@@ -101,6 +101,10 @@ async def driver(model, prompt):
             )
             chat_history[-1] = user_edit
             continue
+        if user_input.startswith("/record"):
+            from record import record_and_transcribe
+            user_input = record_and_transcribe()
+            print("You:", user_input)
 
         chat_history.append(user_input)
         print("Bot: ", end="", flush=True)
