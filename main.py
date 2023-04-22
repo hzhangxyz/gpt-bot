@@ -110,6 +110,8 @@ async def driver(model, prompt):
             from record import record_and_transcribe
             user_input = await record_and_transcribe()
             print("You:", user_input)
+        if user_input.startswith("/quit"):
+            break
 
         chat_history.append(user_input)
         print("Bot: ", end="", flush=True)
