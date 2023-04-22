@@ -108,7 +108,7 @@ async def driver(model, prompt):
             continue
         if user_input.startswith("/record"):
             from record import record_and_transcribe
-            user_input = record_and_transcribe()
+            user_input = await record_and_transcribe()
             print("You:", user_input)
 
         chat_history.append(user_input)
