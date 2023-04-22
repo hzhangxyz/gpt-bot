@@ -74,7 +74,7 @@ async def driver(model, prompt):
 
     multiline = False
     chat_history = []
-    session = prompt_toolkit.PromptSession()
+    session = prompt_toolkit.PromptSession(history=prompt_toolkit.history.FileHistory(os.path.expanduser("~/.gpt_history")))
     while True:
         user_input = await session.prompt_async(
             "You: ",
