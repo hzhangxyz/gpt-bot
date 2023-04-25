@@ -107,7 +107,7 @@ async def driver(model, prompt):
             chat_history[-1] = user_edit
             continue
         if user_input.startswith("/record"):
-            from record import record_and_transcribe
+            from .record import record_and_transcribe
             user_input = await record_and_transcribe()
             print("You:", user_input)
         if user_input.startswith("/quit"):
