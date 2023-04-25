@@ -7,12 +7,12 @@ with open('requirements.txt') as f:
     install_requires = f.read().splitlines()
 
 setup(
-    name="gpt_cli_bot",
+    name="gpt_bot",
     version="0.0.1",
     description="GPT Commandline interface bot",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/gpt-cli-bot",
+    url="https://github.com/hzhangxyz/gpt-bot",
     packages=find_packages(),
     license="GPLv3",
     long_description=long_description,

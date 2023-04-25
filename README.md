@@ -1,4 +1,4 @@
-# gpt-cli-bot
+# gpt-bot
 
 A GPT Command line interface bot.
 
@@ -8,7 +8,7 @@ And maybe `OPENAI_PROXY` is also useful if you need proxy.
 
 ## Usage
 
-`python -m gpt_cli_bot` and enjoy.
+`python -m gpt_bot` and enjoy.
 
 ## Command
 
