@@ -1,0 +1,6 @@
+fire
+numpy
+openai
+prompt_toolkit
+pyaudio
+tiktoken
