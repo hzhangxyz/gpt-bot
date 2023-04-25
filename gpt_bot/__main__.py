@@ -1,9 +1,13 @@
 import asyncio
-import fire
 import openai
 import os
 import prompt_toolkit
 import tiktoken
+
+# Some static configuration
+MODEL = "gpt-3.5-turbo"  # Choose the ID of the model to use
+PROMPT = "You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible."
+MAX_TOKENS = 4096
 
 # Authenticate with OpenAI API
 assert "OPENAI_API_KEY" in os.environ, "OPENAI_API_KEY environment variable not set."
@@ -11,12 +15,8 @@ openai.api_key = os.environ["OPENAI_API_KEY"]
 if "OPENAI_PROXY" in os.environ:
     openai.proxy = os.environ["OPENAI_PROXY"]
 
-MODEL = "gpt-3.5-turbo"  # Choose the ID of the model to use
-PROMPT = "You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible."
-MAX_TOKENS = 4096
 
-
-def num_tokens_from_messages(messages, model=MODEL):
+def num_tokens_from_messages(messages, model):
     encoding = tiktoken.encoding_for_model(model)
     if model == MODEL:  # note: future models may deviate from this
         num_tokens = 0
@@ -67,66 +67,136 @@ def prompt_continuation(width, line_number, is_soft_wrap):
     return '.' * (width - 1) + ' '
 
 
-async def driver(model, prompt):
-    print(f"Welcome to the chatbot({model})! PROMPT is")
-    print(prompt)
-    print()
+class App:
 
-    multiline = False
-    chat_history = []
-    session = prompt_toolkit.PromptSession(history=prompt_toolkit.history.FileHistory(os.path.expanduser("~/.gpt_history")))
-    while True:
-        user_input = await session.prompt_async(
-            "You: ",
-            multiline=multiline,
-            prompt_continuation=prompt_continuation,
-        )
-        if user_input.startswith("/multiline"):
-            multiline = not multiline
-            print(f"{multiline=}")
-            continue
-        if user_input.startswith("/prompt"):
-            prompt = user_input[7:]
-            print("Update prompt to: ", prompt)
-            continue
-        if user_input.startswith("/rollback"):
-            chat_history = chat_history[:-2]
-            print("Rollback the history")
-            continue
-        if user_input.startswith("/history"):
-            print(chat_history)
-            continue
-        if user_input.startswith("/edit"):
-            last_chat = chat_history[-1]
-            user_edit = await session.prompt_async(
-                "Bot: ",
-                multiline=multiline,
-                prompt_continuation=prompt_continuation,
-                default=last_chat,
-            )
-            chat_history[-1] = user_edit
-            continue
-        if user_input.startswith("/record"):
-            from .record import record_and_transcribe
-            user_input = await record_and_transcribe()
-            print("You:", user_input)
-        if user_input.startswith("/quit"):
-            break
+    def __init__(self, model=MODEL, prompt=PROMPT, history="~/.gpt_history"):
+        self.model = model
+        self.prompt = prompt
 
-        chat_history.append(user_input)
-        print("Bot: ", end="", flush=True)
-        bot_response = ""
-        # Get response from OpenAI's GPT-3 model
-        async for message in completion(chat_history, model, prompt):
-            print(message, end="", flush=True)
-            bot_response += message
+        self.middleware = {}
+
+        self.multiline = False
+        self.chat_history = []
+        self.session = prompt_toolkit.PromptSession(history=prompt_toolkit.history.FileHistory(os.path.expanduser(history)))
+
+    async def driver(self):
+        print(f"Welcome to the chatbot({self.model})! PROMPT is")
+        print(self.prompt)
         print()
-        chat_history.append(bot_response)
+
+        while True:
+            user_input = await self.session.prompt_async(
+                "You: ",
+                multiline=self.multiline,
+                prompt_continuation=prompt_continuation,
+            )
+
+            do_quit = False
+            do_continue = False
+            for prefix, function in self.middleware.items():
+                if user_input.startswith(prefix):
+                    try:
+                        line = user_input[len(prefix):]
+                        if asyncio.iscoroutinefunction(function):
+                            user_input = await function(self, line)
+                        else:
+                            user_input = function(self, line)
+                        break
+                    except self.Exit:
+                        do_quit = True
+                        break
+                    except self.Continue:
+                        do_continue = True
+                        break
+            if do_quit:
+                break
+            if do_continue:
+                continue
+
+            self.chat_history.append(user_input)
+            print("Bot: ", end="", flush=True)
+            bot_response = ""
+            # Get response from OpenAI's GPT-3 model
+            async for message in completion(self.chat_history, self.model, self.prompt):
+                print(message, end="", flush=True)
+                bot_response += message
+            print()
+            self.chat_history.append(bot_response)
+
+    def handle(self, prefix):
+
+        def handle_for_prefix(function):
+            self.middleware[prefix] = function
+            return function
+
+        return handle_for_prefix
+
+    class Exit(BaseException):
+        pass
+
+    class Continue(BaseException):
+        pass
 
 
-def main(model=MODEL, prompt=PROMPT):
-    asyncio.run(driver(model, prompt))
+app = App()
+
+
+@app.handle("/quit")
+@app.handle("/exit")
+def _(self, line):
+    raise self.Exit()
+
+
+@app.handle("/multiline")
+def _(self, line):
+    self.multiline = not self.multiline
+    print(f"{self.multiline=}")
+    raise self.Continue()
+
+
+@app.handle("/prompt")
+def _(self, line):
+    self.prompt = line
+    print("Update prompt to:", self.prompt)
+    raise self.Continue()
+
+
+@app.handle("/record")
+async def _(self, line):
+    from .record import record_and_transcribe
+    user_input = await record_and_transcribe()
+    print("You:", user_input)
+    return user_input
+
+
+@app.handle("/history")
+def _(self, line):
+    print("History:")
+    print("Sys:", self.prompt)
+    for i, content in enumerate(self.chat_history):
+        print("You:" if i % 2 == 0 else "Bot:", content)
+    raise self.Continue()
+
+
+@app.handle("/rollback")
+def _(self, line):
+    self.chat_history = self.chat_history[:-2]
+    print("Rollback the history")
+    raise self.Continue()
+
+
+@app.handle("/edit")
+async def _(self, line):
+    last_chat = self.chat_history[-1]
+    user_edit = await self.session.prompt_async(
+        "Bot: ",
+        multiline=self.multiline,
+        prompt_continuation=prompt_continuation,
+        default=last_chat,
+    )
+    self.chat_history[-1] = user_edit
+    raise self.Continue()
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    asyncio.run(app.driver())
