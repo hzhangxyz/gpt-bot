@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setup(
     name="gpt_bot",
-    version="0.0.2",
+    version="0.0.3",
     description="GPT Commandline interface bot",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
