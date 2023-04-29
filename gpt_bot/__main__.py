@@ -78,6 +78,7 @@ class App:
         self.multiline = False
         self.chat_history = []
         self.session = prompt_toolkit.PromptSession(history=prompt_toolkit.history.FileHistory(os.path.expanduser(history)))
+        self.speak = False
 
     async def driver(self):
         print(f"Welcome to the chatbot({self.model})! PROMPT is")
@@ -121,6 +122,9 @@ class App:
                 print(message, end="", flush=True)
                 bot_response += message
             print()
+            if self.speak:
+                from .speak import speak
+                await speak(bot_response)
             self.chat_history.append(bot_response)
 
     def handle(self, prefix):
@@ -195,6 +199,13 @@ async def _(self, line):
         default=last_chat,
     )
     self.chat_history[-1] = user_edit
+    raise self.Continue()
+
+
+@app.handle("/speak")
+def _(self, line):
+    self.speak = not self.speak
+    print(f"{self.speak=}")
     raise self.Continue()
 
 
