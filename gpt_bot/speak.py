@@ -15,7 +15,6 @@ def url_and_param_tts():
         "lan": "zh",
         "aue": 6,
         "pdt": 301,
-        "spd": 15,
     }
     return url, params
 
@@ -29,7 +28,6 @@ def url_and_param_tsn():
         "lan": "zh",
         "aue": 6,
         "per": 3,
-        "spd": 15,
     }
     return url, params
 
